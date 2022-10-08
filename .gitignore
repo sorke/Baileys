@@ -8,10 +8,10 @@ output.csv
 .env
 browser-messages.json
 decoded-ws.json
+lib
 docs
 browser-token.json
 Proxy
 messages*.json
 test.ts
 TestData
-.idea
