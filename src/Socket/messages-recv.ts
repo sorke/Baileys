@@ -315,6 +315,25 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 			}
 
 			break
+		case 'account_sync':
+			if(child.tag === 'disappearing_mode') {
+				const newDuration = +child.attrs.duration
+				const timestamp = +child.attrs.t
+
+				logger.info({ newDuration }, 'updated account disappearing mode')
+
+				ev.emit('creds.update', {
+					accountSettings: {
+						...authState.creds.accountSettings,
+						defaultDisappearingMode: {
+							ephemeralExpiration: newDuration,
+							ephemeralSettingTimestamp: timestamp,
+						},
+					}
+				})
+			}
+
+			break
 		}
 
 		if(Object.keys(result).length) {
