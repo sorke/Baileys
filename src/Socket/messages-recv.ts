@@ -254,7 +254,10 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 			msg.messageStubType = WAMessageStubType.GROUP_CHANGE_RESTRICT
 			msg.messageStubParameters = [ (child.tag === 'locked') ? 'on' : 'off' ]
 			break
-
+		case 'invite':
+			msg.messageStubType = WAMessageStubType.GROUP_CHANGE_INVITE_LINK
+			msg.messageStubParameters = [ child.attrs.code ]
+			break
 		}
 	}
 
@@ -524,11 +527,10 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 			return
 		}
 
-		const decryptionTask = decrypt()
 		await Promise.all([
 			processingMutex.mutex(
 				async() => {
-					await decryptionTask
+					await decrypt()
 					// message failed to decrypt
 					if(msg.messageStubType === proto.WebMessageInfo.StubType.CIPHERTEXT) {
 						logger.error(
@@ -643,33 +645,15 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 		identifier: string,
 		exec: (node: BinaryNode) => Promise<any>
 	) => {
-		const started = ev.buffer()
-		if(started) {
-			await execTask()
-			if(started) {
-				await ev.flush()
-			}
-		} else {
-			const task = execTask()
-			ev.processInBuffer(task)
-		}
+		ev.buffer()
+		await execTask()
+		ev.flush()
 
 		function execTask() {
 			return exec(node)
 				.catch(err => onUnexpectedError(err, identifier))
 		}
 	}
-
-	// called when all offline notifs are handled
-	ws.on('CB:ib,,offline', async(node: BinaryNode) => {
-		const child = getBinaryNodeChild(node, 'offline')
-		const offlineNotifs = +(child?.attrs.count || 0)
-
-		logger.info(`handled ${offlineNotifs} offline messages/notifications`)
-		await ev.flush()
-
-		ev.emit('connection.update', { receivedPendingNotifications: true })
-	})
 
 	// recv a message
 	ws.on('CB:message', (node: BinaryNode) => {
