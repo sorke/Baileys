@@ -106,6 +106,7 @@ export type AnyMediaMessageContent = (
         document: WAMediaUpload
         mimetype: string
         fileName?: string
+        caption?: string
     } & Buttonable & Templatable))
     & { mimetype?: string }
 
@@ -139,6 +140,9 @@ export type AnyRegularMessageContent = (
     | {
         buttonReply: ButtonReplyInfo
         type: 'template' | 'plain'
+    }
+    | {
+        listReply: Omit<proto.Message.IListResponseMessage, 'contextInfo'>
     }
     | {
         product: WASendableProduct,
