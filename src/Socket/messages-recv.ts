@@ -274,7 +274,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 				const jid = attrs.jid
 				ev.emit('chats.update', [
 					{
-						id: jid,
+						id: from,
 						tcToken: content as Buffer
 					}
 				])
