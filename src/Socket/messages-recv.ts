@@ -383,6 +383,44 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 		msgRetryCache.set(key, newValue)
 	}
 
+	const handleConfiguration = async(node: BinaryNode) => {
+
+		const isNotification = node.tag === 'notification'
+
+		const propsNode = getBinaryNodeChild(node, 'props')
+		const propNodes = getBinaryNodeChildren(propsNode, 'prop')
+		const props_version = propsNode?.attrs.version
+
+		if(propNodes.length && props_version) {
+			const props = { }
+
+			propNodes.forEach(pNode => {
+				if(pNode.attrs.name && pNode.attrs.value) {
+					props[pNode.attrs.name] = pNode.attrs.value
+				}
+			})
+
+			ev.emit(isNotification ? 'configuration.update' : 'configuration.set', { props, props_version })
+		}
+
+		const privacyNode = getBinaryNodeChild(node, 'privacy')
+		const categoryPrivacy = getBinaryNodeChildren(privacyNode, 'category')
+
+		if(categoryPrivacy.length) {
+			const privacy = { }
+
+			categoryPrivacy.forEach(cNode => {
+				if(cNode.attrs.name && cNode.attrs.value) {
+					privacy[cNode.attrs.name] = cNode.attrs.value
+				}
+			})
+
+			ev.emit(isNotification ? 'configuration.update' : 'configuration.set', { privacy })
+		}
+
+
+	}
+
 	const sendMessagesAgain = async(
 		key: proto.IMessageKey,
 		ids: string[],
@@ -725,6 +763,15 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 	ws.on('CB:ack,class:message', (node: BinaryNode) => {
 		handleBadAck(node)
 			.catch(error => onUnexpectedError(error, 'handling bad ack'))
+	})
+	ws.on('CB:iq,,props', (node: BinaryNode) => {
+		processNodeWithBuffer(node, 'processing props', handleConfiguration)
+	})
+	ws.on('CB:iq,,privacy', (node: BinaryNode) => {
+		processNodeWithBuffer(node, 'processing privacy', handleConfiguration)
+	})
+	ws.on('CB:notification,,privacy', (node: BinaryNode) => {
+		processNodeWithBuffer(node, 'processing privacy', handleConfiguration)
 	})
 
 	ev.on('call', ([ call ]) => {

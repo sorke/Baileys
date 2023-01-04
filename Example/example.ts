@@ -168,6 +168,13 @@ const startSock = async() => {
 			if(events['chats.delete']) {
 				console.log('chats deleted ', events['chats.delete'])
 			}
+			
+			if (events['configuration.set']) {
+				console.log('configuration initial ', events['configuration.set']);
+			}
+			if (events['configuration.update']) {
+				console.log('configuration updated', events['configuration.update']);
+			}
 		}
 	)
 
