@@ -272,6 +272,9 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 			const tokenList = getBinaryNodeChildren(child, 'token')
 			for(const { attrs, content } of tokenList) {
 				const jid = attrs.jid
+				console.log(child)
+				console.log('attr')
+				console.log(attrs)
 				ev.emit('chats.update', [
 					{
 						id: from,
