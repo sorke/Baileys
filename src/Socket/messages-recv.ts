@@ -1,7 +1,8 @@
 
+import NodeCache from 'node-cache'
 import { proto } from '../../WAProto'
-import { KEY_BUNDLE_TYPE, MIN_PREKEY_COUNT } from '../Defaults'
-import { MessageReceiptType, MessageRelayOptions, MessageUserReceipt, SocketConfig, WACallEvent, WAMessageKey, WAMessageStubType, WAPatchName } from '../Types'
+import { DEFAULT_CACHE_TTLS, KEY_BUNDLE_TYPE, MIN_PREKEY_COUNT } from '../Defaults'
+import { MessageReceiptType, MessageRelayOptions, MessageUserReceipt, SocketConfig, WACallEvent, WAMessageKey, WAMessageStatus, WAMessageStubType, WAPatchName } from '../Types'
 import { decodeMediaRetryNode, decryptMessageNode, delay, encodeBigEndian, encodeSignedDeviceIdentity, getCallStatusFromNode, getHistoryMsg, getNextPreKeys, getStatusFromReceiptType, unixTimestampSeconds, xmppPreKey, xmppSignedPreKey } from '../Utils'
 import { makeMutex } from '../Utils/make-mutex'
 import { cleanMessage } from '../Utils/process-message'
@@ -36,8 +37,14 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 	/** this mutex ensures that each retryRequest will wait for the previous one to finish */
 	const retryMutex = makeMutex()
 
-	const msgRetryMap = config.msgRetryCounterMap || { }
-	const callOfferData: { [id: string]: WACallEvent } = { }
+	const msgRetryCache = config.msgRetryCounterCache || new NodeCache({
+		stdTTL: DEFAULT_CACHE_TTLS.MSG_RETRY, // 1 hour
+		useClones: false
+	})
+	const callOfferCache = config.callOfferCache || new NodeCache({
+		stdTTL: DEFAULT_CACHE_TTLS.CALL_OFFER, // 5 mins
+		useClones: false
+	})
 
 	let sendActiveReceipts = false
 
@@ -90,15 +97,15 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 	const sendRetryRequest = async(node: BinaryNode, forceIncludeKeys = false) => {
 		const msgId = node.attrs.id
 
-		let retryCount = msgRetryMap[msgId] || 0
+		let retryCount = msgRetryCache.get<number>(msgId) || 0
 		if(retryCount >= 5) {
 			logger.debug({ retryCount, msgId }, 'reached retry limit, clearing')
-			delete msgRetryMap[msgId]
+			msgRetryCache.del(msgId)
 			return
 		}
 
 		retryCount += 1
-		msgRetryMap[msgId] = retryCount
+		msgRetryCache.set(msgId, retryCount)
 
 		const { account, signedPreKey, signedIdentityKey: identityKey } = authState.creds
 
@@ -365,13 +372,14 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
 	const willSendMessageAgain = (id: string, participant: string) => {
 		const key = `${id}:${participant}`
-		const retryCount = msgRetryMap[key] || 0
+		const retryCount = msgRetryCache.get<number>(key) || 0
 		return retryCount < 5
 	}
 
 	const updateSendMessageAgainCount = (id: string, participant: string) => {
 		const key = `${id}:${participant}`
-		msgRetryMap[key] = (msgRetryMap[key] || 0) + 1
+		const newValue = (msgRetryCache.get<number>(key) || 0) + 1
+		msgRetryCache.set(key, newValue)
 	}
 
 	const sendMessagesAgain = async(
@@ -621,18 +629,20 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 		if(status === 'offer') {
 			call.isVideo = !!getBinaryNodeChild(infoChild, 'video')
 			call.isGroup = infoChild.attrs.type === 'group'
-			callOfferData[call.id] = call
+			callOfferCache.set(call.id, call)
 		}
 
+		const existingCall = callOfferCache.get<WACallEvent>(call.id)
+
 		// use existing call info to populate this event
-		if(callOfferData[call.id]) {
-			call.isVideo = callOfferData[call.id].isVideo
-			call.isGroup = callOfferData[call.id].isGroup
+		if(existingCall) {
+			call.isVideo = existingCall.isVideo
+			call.isGroup = existingCall.isGroup
 		}
 
 		// delete data once call has ended
 		if(status === 'reject' || status === 'accept' || status === 'timeout') {
-			delete callOfferData[call.id]
+			callOfferCache.del(call.id)
 		}
 
 		ev.emit('call', [call])
@@ -641,12 +651,12 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 	}
 
 	const handleBadAck = async({ attrs }: BinaryNode) => {
+		const key: WAMessageKey = { remoteJid: attrs.from, fromMe: true, id: attrs.id }
 		// current hypothesis is that if pash is sent in the ack
 		// it means -- the message hasn't reached all devices yet
 		// we'll retry sending the message here
 		if(attrs.phash) {
 			logger.info({ attrs }, 'received phash in ack, resending message...')
-			const key: WAMessageKey = { remoteJid: attrs.from, fromMe: true, id: attrs.id }
 			const msg = await getMessage(key)
 			if(msg) {
 				await relayMessage(key.remoteJid!, msg, { messageId: key.id!, useUserDevicesCache: false })
@@ -654,14 +664,34 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 				logger.warn({ attrs }, 'could not send message again, as it was not found')
 			}
 		}
+
+		// error in acknowledgement,
+		// device could not display the message
+		if(attrs.error) {
+			logger.warn({ attrs }, 'received error in ack')
+			ev.emit(
+				'messages.update',
+				[
+					{
+						key,
+						update: {
+							status: WAMessageStatus.ERROR,
+							messageStubParameters: [
+								attrs.error
+							]
+						}
+					}
+				]
+			)
+		}
 	}
 
 	/// processes a node with the given function
 	/// and adds the task to the existing buffer if we're buffering events
-	const processNodeWithBuffer = async(
+	const processNodeWithBuffer = async<T>(
 		node: BinaryNode,
 		identifier: string,
-		exec: (node: BinaryNode) => Promise<any>
+		exec: (node: BinaryNode) => Promise<T>
 	) => {
 		ev.buffer()
 		await execTask()
