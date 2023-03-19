@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@adiwajshing/eslint-config@git+https://github.com/adiwajshing/eslint-config":
+"@adiwajshing/eslint-config@github:adiwajshing/eslint-config":
   version "1.0.0"
-  resolved "git+ssh://git@github.com/adiwajshing/eslint-config.git#5ec841a7281fc27232d570b30fd410dce5de76c8"
+  resolved "https://codeload.github.com/adiwajshing/eslint-config/tar.gz/5ec841a7281fc27232d570b30fd410dce5de76c8"
   dependencies:
     "@typescript-eslint/eslint-plugin" "^5.33.1"
     "@typescript-eslint/parser" "^5.33.1"
