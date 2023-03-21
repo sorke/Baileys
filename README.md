@@ -228,6 +228,10 @@ export type BaileysEventMap = {
 	'connection.update': Partial<ConnectionState>
     /** credentials updated -- some metadata, keys or something */
     'creds.update': Partial<AuthenticationCreds>
+    /** property and privacy config */
+    'configuration.set': Partial<ConfigurationState>
+    /** update property and privacy config */
+    'configuration.update': Partial<ConfigurationState>
     /** history sync, everything is reverse chronologically sorted */
     'messaging-history.set': {
         chats: Chat[]

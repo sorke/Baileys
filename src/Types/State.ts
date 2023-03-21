@@ -27,3 +27,9 @@ export type ConnectionState = {
 	 * */
 	isOnline?: boolean
 }
+
+export type ConfigurationState = {
+	props?: { [key: string]: string }
+	props_version?: string
+	privacy?: { [key: string]: string }
+}
