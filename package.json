@@ -1,8 +1,8 @@
 {
-  "name": "@adiwajshing/baileys",
-  "version": "5.0.0",
-  "description": "WhatsApp API",
-  "homepage": "https://github.com/adiwajshing/Baileys",
+  "name": "baileys",
+  "version": "6.0.9",
+  "description": "Baileys Fixed",
+  "homepage": "https://github.com/amiruldev20/Baileys",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "keywords": [
@@ -14,7 +14,9 @@
     "whatsapp-chat",
     "whatsapp-group",
     "automation",
-    "multi-device"
+    "multi-device",
+    "Amirul Dev",
+    "Baileys"
   ],
   "scripts": {
     "test": "jest",
@@ -27,7 +29,7 @@
     "lint": "eslint . --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint . --fix --ext .js,.ts,.jsx,.tsx"
   },
-  "author": "Adhiraj Singh",
+  "author": "Amirul Dev",
   "license": "MIT",
   "repository": {
     "url": "git@github.com:adiwajshing/baileys.git"
