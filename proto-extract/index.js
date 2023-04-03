@@ -38,7 +38,8 @@ async function findAppModules() {
 	const bootstrapQRID = index.match(/src="\/app.([0-9a-z]{10,}).js"/)[1]
 	const bootstrapQRURL = baseURL + '/app.' + bootstrapQRID + '.js'
 
-	console.error('Found source JS URL:', bootstrapQRURL)
+	console.log('Found source JS URL:', bootstrapQRURL)
+
 
 	const qrData = await request.get(bootstrapQRURL, ua)
 	const waVersion = qrData.match(/appVersion:"(\d\.\d+\.\d+)"/)[1]
