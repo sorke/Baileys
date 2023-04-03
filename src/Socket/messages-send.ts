@@ -72,9 +72,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 	}
 
 	/**
-		 * generic send receipt function
-		 * used for receipts of phone call, read, delivery etc.
-		 * */
+	 * generic send receipt function
+	 * used for receipts of phone call, read, delivery etc.
+	 * */
 	const sendReceipt = async (jid: string, participant: string | undefined, messageIds: string[], type: MessageReceiptType) => {
 		const node: BinaryNode = {
 			tag: 'receipt',
