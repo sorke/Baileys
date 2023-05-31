@@ -1,0 +1,18 @@
+{
+  "name": "whatsapp-web-protobuf-extractor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "acorn": "^6.4.1",
+    "acorn-walk": "^6.1.1",
+    "pbjs": "^0.0.14",
+    "protobufjs": "^7.2.2",
+    "protobufjs-cli": "^1.1.1",
+    "request": "^2.88.0",
+    "request-promise-core": "^1.1.2",
+    "request-promise-native": "^1.0.7"
+  }
+}
